@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Meditation Program Platform
 
 A comprehensive meditation program management platform with video content, built with React, TypeScript, and Firebase.
@@ -114,3 +115,6 @@ src/
 - Offline mode support
 - Advanced video annotations
 - Community features
+=======
+# Guided_Meditation
+>>>>>>> main
