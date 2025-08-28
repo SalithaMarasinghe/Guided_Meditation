@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { SidePanel } from './components/SidePanel';
 import { ProgramPage } from './components/ProgramPage';
 import { AdminDashboard } from './components/AdminDashboard';

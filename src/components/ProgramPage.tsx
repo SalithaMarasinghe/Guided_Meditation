@@ -26,9 +26,9 @@ export const ProgramPage: React.FC<ProgramPageProps> = ({
     onVideoComplete?.(video.id);
   };
 
-  const allVideosCompleted = programPage.videos.every(video => 
-    completedVideos.includes(video.id)
-  );
+  // Debug log the video data
+  console.log('Selected Video:', selectedVideo);
+  console.log('All Videos:', programPage.videos);
 
   return (
     <div className="flex-1 p-6 bg-gradient-to-br from-blue-50 to-green-50 min-h-screen">

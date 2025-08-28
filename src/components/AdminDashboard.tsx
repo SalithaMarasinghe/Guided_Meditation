@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { MeditationProgram, ProgramPage, Video } from '../types';
 import { FirebaseService } from '../services/firebaseService';
-import { Plus, Edit, Trash2, Save, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Video as VideoIcon } from 'lucide-react';
+import { VideoUploader } from './VideoUploader';
+import { CheckCircle } from 'lucide-react';
 
 interface AdminDashboardProps {
   programs: MeditationProgram[];
@@ -100,7 +102,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       ...editingProgram,
       pages: editingProgram.pages?.map(page =>
         page.id === pageId
-          ? { ...page, videos: [...page.videos, newVideo] }
+          ? { ...page, videos: [...(page.videos || []), newVideo] }
+          : page
+      ) || []
+    });
+  };
+
+  const handleVideoUpload = (pageId: string, videoId: string, url: string) => {
+    setEditingProgram({
+      ...editingProgram,
+      pages: editingProgram.pages?.map(page =>
+        page.id === pageId
+          ? {
+              ...page,
+              videos: page.videos.map(video =>
+                video.id === videoId ? { ...video, url } : video
+              )
+            }
           : page
       ) || []
     });
@@ -263,17 +281,75 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </button>
                       </div>
                       <div className="space-y-3">
-                        {page.videos.map((video, index) => (
-                          <div key={video.id} className="border border-gray-100 rounded p-3 bg-gray-50">
-                            <div className="flex justify-between items-center mb-3">
-                              <span className="text-sm font-medium text-gray-600">Video {index + 1}</span>
-                              <button
-                                onClick={() => deleteVideo(page.id, video.id)}
-                                className="text-red-600 hover:text-red-700 transition-colors"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
+                        {page.videos.map((video) => (
+                          <div key={video.id} className="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <div className="flex justify-between items-start">
+                              <input
+                                type="text"
+                                value={video.name}
+                                onChange={(e) => updateVideo(page.id, video.id, { name: e.target.value })}
+                                placeholder="Video title"
+                                className="w-full font-medium"
+                              />
+                              <div className="flex space-x-2">
+                                {!video.url && (
+                                  <div className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                                    Needs video
+                                  </div>
+                                )}
+                                <button
+                                  onClick={() => deleteVideo(page.id, video.id)}
+                                  className="text-red-500 hover:text-red-700"
+                                  title="Delete video"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
                             </div>
+
+                            {/* Video URL Input */}
+                            <div className="flex items-center space-x-2">
+                              <VideoIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                              <input
+                                type="text"
+                                value={video.url || ''}
+                                onChange={(e) => updateVideo(page.id, video.id, { url: e.target.value })}
+                                placeholder="Video URL"
+                                className="flex-1 text-sm border rounded px-2 py-1"
+                              />
+                            </div>
+
+                            {/* Video Uploader */}
+                            {!video.url && (
+                              <div className="mt-2">
+                                <p className="text-xs text-gray-500 mb-1">Or upload a video:</p>
+                                <VideoUploader
+                                  onUploadComplete={(url) => {
+                                    handleVideoUpload(page.id, video.id, url);
+                                  }}
+                                  folderPath={`programs/${editingProgram.id}/videos`}
+                                />
+                              </div>
+                            )}
+
+                            {video.url && (
+                              <div className="mt-2">
+                                <div className="text-xs text-green-600 flex items-center">
+                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                  Video uploaded successfully
+                                </div>
+                                <div className="mt-1">
+                                  {/* Replace this block if VideoPlayer is not working */}
+                                  <video
+                                    src={video.url}
+                                    controls
+                                    className="max-w-full h-auto rounded border border-gray-200"
+                                  />
+                                  {/* Or use your VideoPlayer if it works */}
+                                  {/* <VideoPlayer video={video} className="max-w-full h-auto rounded border border-gray-200" /> */}
+                                </div>
+                              </div>
+                            )}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                               <input
                                 type="text"
