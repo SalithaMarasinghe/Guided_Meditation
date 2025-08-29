@@ -1,17 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MeditationProgram } from '../types';
-import { Play, Settings } from 'lucide-react';
+import { Play, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface SidePanelProps {
   programs: MeditationProgram[];
   selectedProgram: MeditationProgram | null;
   onSelectProgram: (program: MeditationProgram) => void;
+  onToggleCollapse: (isCollapsed: boolean) => void;
 }
 
 export const SidePanel: React.FC<SidePanelProps> = ({
   programs,
   selectedProgram,
-  onSelectProgram
+  onSelectProgram,
+  onToggleCollapse
 }) => {
   const renderProgramsList = () => {
     if (programs.length === 0) {
@@ -58,26 +60,43 @@ export const SidePanel: React.FC<SidePanelProps> = ({
     );
   };
 
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  const toggleSidebar = () => {
+    const newState = !isCollapsed;
+    setIsCollapsed(newState);
+    onToggleCollapse(newState);
+  };
+
   return (
-    <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
-      <div className="p-6 border-b border-gray-200">
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">Meditation</h1>
-        <p className="text-gray-600 text-sm">Find your inner peace</p>
-      </div>
+    <div 
+      className={`h-full bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ease-in-out ${
+        isCollapsed ? 'w-16' : 'w-80'
+      }`}
+    >
+      {/* Toggle Button */}
+      <button
+        onClick={toggleSidebar}
+        className="absolute -right-3 top-6 z-30 w-6 h-12 flex items-center justify-center bg-white rounded-r-lg border border-l-0 border-gray-200 shadow-sm hover:bg-gray-50 transition-colors"
+      >
+        {isCollapsed ? (
+          <ChevronRight className="w-4 h-4 text-gray-500" />
+        ) : (
+          <ChevronLeft className="w-4 h-4 text-gray-500" />
+        )}
+      </button>
 
-      <div className="p-4 border-b border-gray-100">
-        <a
-          href="/admin/dashboard"
-          className="w-full flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 text-gray-600 hover:bg-gray-100"
-        >
-          <Settings className="w-4 h-4" />
-          <span className="text-sm font-medium">Admin Dashboard</span>
-        </a>
-      </div>
+      {/* Sidebar Content */}
+      <div className={`overflow-hidden transition-all duration-300 ${isCollapsed ? 'opacity-0 w-0' : 'opacity-100 w-full'}`}>
+        <div className="p-6 border-b border-gray-200">
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">Meditation</h1>
+          <p className="text-gray-600 text-sm">Find your inner peace</p>
+        </div>
 
-      <div className="flex-1 overflow-y-auto p-4">
-        <div className="space-y-2">
-          {renderProgramsList()}
+        <div className="flex-1 overflow-y-auto p-4">
+          <div className="space-y-2">
+            {renderProgramsList()}
+          </div>
         </div>
       </div>
     </div>

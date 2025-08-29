@@ -96,6 +96,7 @@ const UserApp = () => {
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [completedVideos, setCompletedVideos] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     const unsubscribe = FirebaseService.onProgramsChange((newPrograms) => {
@@ -172,14 +173,27 @@ const UserApp = () => {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      <SidePanel
-        programs={programs}
-        selectedProgram={selectedProgram}
-        onSelectProgram={handleSelectProgram}
-      />
+    <div className="relative h-screen bg-gray-50 overflow-hidden">
+      <div 
+        className={`fixed top-0 left-0 h-full z-20 transition-transform duration-300 ease-in-out ${
+          isSidebarCollapsed ? 'w-16' : 'w-80'
+        }`}
+      >
+        <SidePanel
+          programs={programs}
+          selectedProgram={selectedProgram}
+          onSelectProgram={handleSelectProgram}
+          onToggleCollapse={setIsSidebarCollapsed}
+        />
+      </div>
       
-      <main className="flex-1 overflow-y-auto p-6">
+      <main 
+        className="h-full overflow-y-auto p-6 pl-16 transition-all duration-300"
+        style={{
+          marginLeft: isSidebarCollapsed ? '4rem' : '20rem',
+          width: isSidebarCollapsed ? 'calc(100% - 4rem)' : 'calc(100% - 20rem)'
+        }}
+      >
         {selectedProgram ? (
           <div className="max-w-4xl mx-auto">
             <ProgramPage 
