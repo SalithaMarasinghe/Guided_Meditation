@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, RotateCcw, Bell, BellOff } from 'lucide-react';
 
 export const Timer: React.FC = () => {
-  const [minutes, setMinutes] = useState<number>(10);
+  const [minutes, setMinutes] = useState<number>(30);
   const [seconds, setSeconds] = useState<number>(0);
   const [isActive, setIsActive] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
@@ -80,7 +80,7 @@ export const Timer: React.FC = () => {
   };
 
   const resetTimer = () => {
-    setMinutes(10);
+    setMinutes(30);
     setSeconds(0);
     setIsActive(false);
     if (audioRef.current) {
