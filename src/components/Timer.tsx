@@ -1,0 +1,179 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Play, Pause, RotateCcw, Bell, BellOff } from 'lucide-react';
+
+export const Timer: React.FC = () => {
+  const [minutes, setMinutes] = useState<number>(10);
+  const [seconds, setSeconds] = useState<number>(0);
+  const [isActive, setIsActive] = useState<boolean>(false);
+  const [isMuted, setIsMuted] = useState<boolean>(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+
+    if (isActive) {
+      interval = setInterval(() => {
+        setSeconds((prevSeconds) => {
+          if (prevSeconds === 0) {
+            if (minutes === 0) {
+              // Timer has reached zero
+              clearInterval(interval as NodeJS.Timeout);
+              playBellSound();
+              setIsActive(false);
+              return 0;
+            }
+            setMinutes((prevMinutes) => prevMinutes - 1);
+            return 59;
+          }
+          return prevSeconds - 1;
+        });
+      }, 1000);
+    } else if (!isActive && seconds !== 0 && interval) {
+      clearInterval(interval);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isActive, minutes, seconds, isMuted]);
+
+  const playBellSound = () => {
+    if (isMuted) return;
+    
+    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    
+    // Create a simple bell sound
+    const bell = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    
+    bell.type = 'sine';
+    const now = audioCtx.currentTime;
+    
+    // Bell characteristics
+    bell.frequency.setValueAtTime(1000, now);
+    bell.frequency.exponentialRampToValueAtTime(400, now + 1);
+    
+    // Volume envelope
+    gainNode.gain.setValueAtTime(0, now);
+    gainNode.gain.linearRampToValueAtTime(0.5, now + 0.1);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 2);
+    
+    bell.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    bell.start();
+    bell.stop(now + 2);
+  };
+
+  const toggleTimer = () => {
+    if (!isActive && minutes === 0 && seconds === 0) {
+      // Don't start if time is 00:00
+      return;
+    }
+    
+    if (isActive && minutes === 0 && seconds === 0) {
+      // Timer just ended, play sound
+      playBellSound();
+    }
+    
+    setIsActive(!isActive);
+  };
+
+  const resetTimer = () => {
+    setMinutes(10);
+    setSeconds(0);
+    setIsActive(false);
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+  };
+
+  const handleMinutesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10) || 0;
+    if (value >= 0 && value <= 999) {
+      setMinutes(value);
+    }
+  };
+
+  const handleSecondsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10) || 0;
+    if (value >= 0 && value <= 59) {
+      setSeconds(value);
+    }
+  };
+
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+  };
+
+  const formatTime = (time: number) => {
+    return time.toString().padStart(2, '0');
+  };
+
+  return (
+    <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
+      <h3 className="text-xl font-semibold text-gray-800 mb-4">Meditation Timer</h3>
+      
+      <div className="flex items-center justify-center space-x-4 mb-6">
+        <div className="flex flex-col items-center">
+          <label className="text-sm text-gray-600 mb-1">Minutes</label>
+          <input
+            type="number"
+            min="0"
+            max="999"
+            value={minutes}
+            onChange={handleMinutesChange}
+            className="w-20 text-center text-4xl font-mono border-b-2 border-gray-300 focus:outline-none focus:border-blue-500"
+            disabled={isActive}
+          />
+        </div>
+        <span className="text-4xl font-mono pt-6">:</span>
+        <div className="flex flex-col items-center">
+          <label className="text-sm text-gray-600 mb-1">Seconds</label>
+          <input
+            type="number"
+            min="0"
+            max="59"
+            value={formatTime(seconds)}
+            onChange={handleSecondsChange}
+            className="w-20 text-center text-4xl font-mono border-b-2 border-gray-300 focus:outline-none focus:border-blue-500"
+            disabled={isActive}
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-center space-x-4">
+        <button
+          onClick={toggleTimer}
+          className={`flex items-center justify-center w-12 h-12 rounded-full ${
+            isActive ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'
+          } text-white transition-colors`}
+          title={isActive ? 'Pause' : 'Start'}
+        >
+          {isActive ? <Pause size={20} /> : <Play size={20} className="ml-1" />}
+        </button>
+        
+        <button
+          onClick={resetTimer}
+          className="flex items-center justify-center w-12 h-12 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-700 transition-colors"
+          title="Reset"
+        >
+          <RotateCcw size={20} />
+        </button>
+        
+        <button
+          onClick={toggleMute}
+          className={`flex items-center justify-center w-12 h-12 rounded-full ${
+            isMuted ? 'bg-gray-200' : 'bg-blue-100'
+          } text-blue-600 hover:bg-blue-200 transition-colors`}
+          title={isMuted ? 'Unmute' : 'Mute'}
+        >
+          {isMuted ? <BellOff size={20} /> : <Bell size={20} />}
+        </button>
+      </div>
+
+      {/* No external audio element needed - using Web Audio API */}
+    </div>
+  );
+};
