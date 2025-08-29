@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { VideoPlayer } from './VideoPlayer';
 import { ChevronRight, BookOpen, Download } from 'lucide-react';
-import { ProgramPage as ProgramPageType, Video } from '../types';
+import { Timer } from './Timer';
+import { ProgramPage as ProgramPageType, Video, Resource } from '../types';
+import { ResourcesDownload } from './ResourcesDownload';
 
 interface ProgramPageProps {
-  programPage: ProgramPageType;
+  programPage: ProgramPageType & {
+    programResources?: Resource[];
+  };
   programName: string;
   onNextPage?: () => void;
   hasNextPage?: boolean;
@@ -34,13 +38,21 @@ export const ProgramPage: React.FC<ProgramPageProps> = ({
     <div className="flex-1 p-6 bg-gradient-to-br from-blue-50 to-green-50 min-h-screen">
       {/* Program Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-4">{programName}</h1>
-        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-          <div className="flex items-start space-x-3">
-            <BookOpen className="w-5 h-5 text-blue-600 mt-1 flex-shrink-0" />
-            <div>
-              <h2 className="text-lg font-semibold text-gray-800 mb-2">Instructions</h2>
-              <p className="text-gray-600 leading-relaxed">{programPage.instructions}</p>
+        <h1 className="text-3xl font-bold text-gray-800 mb-6">{programName}</h1>
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+          <div className="flex items-start space-x-4">
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <BookOpen className="w-6 h-6 text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-xl font-semibold text-gray-800 mb-3">Instructions for This Session</h2>
+              <div className="prose prose-blue max-w-none">
+                {programPage.instructions.split('\n').map((paragraph, i) => (
+                  <p key={i} className="text-gray-700 leading-relaxed mb-3 last:mb-0">
+                    {paragraph}
+                  </p>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -124,15 +136,34 @@ export const ProgramPage: React.FC<ProgramPageProps> = ({
         </div>
       </div>
 
+      {/* Resources Section */}
+      <div className="mt-8 space-y-8">
+        {((programPage.resources && programPage.resources.length > 0) || (programPage.programResources && programPage.programResources.length > 0)) && (
+          <div>
+            <ResourcesDownload 
+              resources={[
+                ...(programPage.resources || []),
+                ...(programPage.programResources || [])
+              ]} 
+            />
+          </div>
+        )}
+        
+        {/* Timer Section */}
+        <div>
+          <Timer />
+        </div>
+      </div>
+
       {/* Next Page Button */}
-      {hasNextPage && (
-        <div className="flex justify-center">
+      {hasNextPage && onNextPage && (
+        <div className="mt-8 flex justify-end">
           <button
             onClick={onNextPage}
-            className="flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
-            <span>Continue to Next Page</span>
-            <ChevronRight className="w-5 h-5" />
+            Next Page
+            <ChevronRight className="ml-2 -mr-1 w-5 h-5" />
           </button>
         </div>
       )}

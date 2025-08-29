@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { MeditationProgram, ProgramPage, Video } from '../types';
 import { FirebaseService } from '../services/firebaseService';
-import { Plus, Edit, Trash2, Save, X, Video as VideoIcon } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Video as VideoIcon, FileText } from 'lucide-react';
 import { VideoUploader } from './VideoUploader';
+import { ResourceManager } from './ResourceManager';
 import { CheckCircle } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -17,6 +18,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [selectedProgram, setSelectedProgram] = useState<MeditationProgram | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editingProgram, setEditingProgram] = useState<Partial<MeditationProgram>>({});
+  const [activeTab, setActiveTab] = useState<'videos' | 'resources'>('videos');
+  
+  const handleAddResource = (url: string, name: string) => {
+    const newResource = { name, url, type: url.split('.').pop()?.toLowerCase() || 'file' };
+    setEditingProgram(prev => ({
+      ...prev,
+      resources: [...(prev.resources || []), newResource]
+    }));
+  };
+
+  const handleDeleteResource = (index: number) => {
+    setEditingProgram(prev => ({
+      ...prev,
+      resources: (prev.resources || []).filter((_, i) => i !== index)
+    }));
+  };
 
   const handleCreateProgram = () => {
     setSelectedProgram(null);
@@ -24,7 +41,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       name: '',
       description: '',
       instructions: '',
-      pages: []
+      pages: [],
+      resources: []
     });
     setIsEditing(true);
   };
@@ -37,10 +55,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const handleSaveProgram = async () => {
     try {
+      const programData = {
+        ...editingProgram,
+        resources: editingProgram.resources || [],
+        pages: (editingProgram.pages || []).map(page => ({
+          ...page,
+          resources: page.resources || []
+        }))
+      };
+
       if (selectedProgram) {
-        await FirebaseService.updateProgram(selectedProgram.id, editingProgram);
+        await FirebaseService.updateProgram(selectedProgram.id, programData);
       } else {
-        await FirebaseService.createProgram(editingProgram as Omit<MeditationProgram, 'id' | 'createdAt' | 'updatedAt'>);
+        await FirebaseService.createProgram(programData as Omit<MeditationProgram, 'id' | 'createdAt' | 'updatedAt'>);
       }
       setIsEditing(false);
       setEditingProgram({});
@@ -166,73 +193,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
 
         {isEditing ? (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-semibold text-gray-800">
-                {selectedProgram ? 'Edit Program' : 'Create Program'}
-              </h2>
-              <div className="flex space-x-2">
-                <button
-                  onClick={handleSaveProgram}
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>Save</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setIsEditing(false);
-                    setEditingProgram({});
-                    setSelectedProgram(null);
-                  }}
-                  className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                  <span>Cancel</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Program Details */}
-            <div className="space-y-4 mb-8">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Program Name
-                </label>
-                <input
-                  type="text"
-                  value={editingProgram.name || ''}
-                  onChange={(e) => setEditingProgram({ ...editingProgram, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description
-                </label>
-                <textarea
-                  value={editingProgram.description || ''}
-                  onChange={(e) => setEditingProgram({ ...editingProgram, description: e.target.value })}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  General Instructions
-                </label>
-                <textarea
-                  value={editingProgram.instructions || ''}
-                  onChange={(e) => setEditingProgram({ ...editingProgram, instructions: e.target.value })}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            {/* Pages */}
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
+          renderProgramForm()
                 <h3 className="text-xl font-semibold text-gray-800">Pages</h3>
                 <button
                   onClick={addPage}

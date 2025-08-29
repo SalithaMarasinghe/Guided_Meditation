@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { SidePanel } from './components/SidePanel';
 import { ProgramPage } from './components/ProgramPage';
-import { AdminDashboard } from './components/AdminDashboard';
+import { AdminDashboard } from './components/NewAdminDashboard';
 import { FirebaseService } from './services/firebaseService';
 import { MeditationProgram } from './types';
 import { Loader, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -147,7 +147,10 @@ function App() {
 
             {/* Program Page Content */}
             <ProgramPage
-              programPage={selectedProgram.pages[currentPageIndex]}
+              programPage={{
+                ...selectedProgram.pages[currentPageIndex],
+                programResources: selectedProgram.resources
+              }}
               programName={selectedProgram.name}
               onNextPage={handleNextPage}
               hasNextPage={currentPageIndex < selectedProgram.pages.length - 1}
