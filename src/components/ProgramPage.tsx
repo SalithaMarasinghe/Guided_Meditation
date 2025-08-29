@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, ReactNode } from 'react';
 import { VideoPlayer } from './VideoPlayer';
-import { ChevronRight, BookOpen, Download } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 import { Timer } from './Timer';
 import { ProgramPage as ProgramPageType, Video, Resource } from '../types';
 import { ResourcesDownload } from './ResourcesDownload';
@@ -19,8 +19,6 @@ interface ProgramPageProps {
 export const ProgramPage: React.FC<ProgramPageProps> = ({
   programPage,
   programName,
-  onNextPage,
-  hasNextPage,
   onVideoComplete,
   completedVideos = []
 }) => {
@@ -29,6 +27,7 @@ export const ProgramPage: React.FC<ProgramPageProps> = ({
   const handleVideoEnd = (video: Video) => {
     onVideoComplete?.(video.id);
   };
+
 
   // Debug log the video data
   console.log('Selected Video:', selectedVideo);
@@ -46,12 +45,63 @@ export const ProgramPage: React.FC<ProgramPageProps> = ({
             </div>
             <div className="flex-1">
               <h2 className="text-xl font-semibold text-gray-800 mb-3">Instructions for This Session</h2>
-              <div className="prose prose-blue max-w-none">
-                {programPage.instructions.split('\n').map((paragraph, i) => (
-                  <p key={i} className="text-gray-700 leading-relaxed mb-3 last:mb-0">
-                    {paragraph}
-                  </p>
-                ))}
+              <div className="prose prose-blue max-w-none text-gray-700 leading-relaxed space-y-4">
+                {(() => {
+                  const lines = programPage.instructions.split('\n');
+                  const elements: ReactNode[] = [];
+                  let currentList: ReactNode[] | null = null;
+
+                  for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+
+                    // Check for list items
+                    if (line.match(/^[•-]|^\d+\./)) {
+                      const content = line.replace(/^[•-]\s*|^\d+\.\s*/, '').trim();
+                      
+                      // Start a new list if not in one
+                      if (!currentList) {
+                        currentList = [];
+                        elements.push(
+                          <ul key={`list-${i}`} className="list-disc pl-6 space-y-2">
+                            <li className="text-gray-700">{content}</li>
+                            {currentList}
+                          </ul>
+                        );
+                      } else {
+                        // Continue existing list
+                        currentList.push(
+                          <li key={i} className="text-gray-700">
+                            {content}
+                          </li>
+                        );
+                      }
+                    } else {
+                      // End current list if exists
+                      currentList = null;
+                      
+                      // Add regular paragraph with bold support
+                      const parts = line.split('**');
+                      const formatted = parts.map((part, idx) => 
+                        idx % 2 === 1 ? (
+                          <strong key={idx} className="text-gray-900">
+                            {part}
+                          </strong>
+                        ) : (
+                          part
+                        )
+                      );
+                      
+                      elements.push(
+                        <p key={`p-${i}`} className="text-gray-700">
+                          {formatted}
+                        </p>
+                      );
+                    }
+                  }
+                  
+                  return elements;
+                })()}
               </div>
             </div>
           </div>
@@ -60,7 +110,7 @@ export const ProgramPage: React.FC<ProgramPageProps> = ({
 
       {/* Video Section */}
       {selectedVideo && (
-        <div className="mb-8">
+        <div id="videoPlayer" className="mb-8">
           <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
             <h3 className="text-xl font-semibold text-gray-800 mb-4">Current Video</h3>
             <VideoPlayer
@@ -70,7 +120,17 @@ export const ProgramPage: React.FC<ProgramPageProps> = ({
             />
             <div className="mt-4">
               <h4 className="font-semibold text-gray-800 mb-2">{selectedVideo.name}</h4>
-              <p className="text-gray-600">{selectedVideo.description}</p>
+              <p className="text-gray-600 whitespace-pre-line">
+                {selectedVideo.description && selectedVideo.description
+                  .replace(/(Sinhala:|English:)/g, '<span class="font-bold">$1</span>')
+                  .split('\n')
+                  .map((line, i) => (
+                    <React.Fragment key={i}>
+                      <span dangerouslySetInnerHTML={{ __html: line }} />
+                      <br />
+                    </React.Fragment>
+                  ))}
+              </p>
             </div>
           </div>
         </div>
@@ -78,95 +138,63 @@ export const ProgramPage: React.FC<ProgramPageProps> = ({
 
       {/* Video List */}
       <div className="mb-8">
-        <h3 className="text-xl font-semibold text-gray-800 mb-4">Page Videos</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {programPage.videos.map((video, index) => (
-            <div
-              key={video.id}
-              className={`bg-white rounded-lg p-4 shadow-sm border transition-all duration-200 hover:shadow-md ${
-                selectedVideo?.id === video.id 
-                  ? 'border-blue-500 ring-2 ring-blue-200' 
-                  : 'border-gray-100 hover:border-gray-200'
-              } ${completedVideos.includes(video.id) ? 'bg-green-50' : ''}`}
-            >
-              <div 
-                className="flex items-start justify-between cursor-pointer"
-                onClick={() => setSelectedVideo(video)}
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium">Page Videos</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {programPage.videos.map((video, index) => (
+              <div
+                key={video.id}
+                className={`bg-white rounded-lg p-4 shadow-sm border transition-all duration-200 hover:shadow-md ${
+                  selectedVideo?.id === video.id 
+                    ? 'border-blue-500 ring-2 ring-blue-200' 
+                    : 'border-gray-100 hover:border-gray-200'
+                } ${completedVideos.includes(video.id) ? 'bg-green-50' : ''}`}
               >
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <span className="text-sm font-medium text-gray-500">Video {index + 1}</span>
-                    {completedVideos.includes(video.id) && (
-                      <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                        Completed
-                      </span>
-                    )}
+                <div 
+                  className="flex items-start justify-between cursor-pointer"
+                  onClick={() => setSelectedVideo(video)}
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-semibold text-gray-800">{video.name || video.description || `Video ${index + 1}`}</h4>
+                      {completedVideos.includes(video.id) && (
+                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                          Completed
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <h4 className="font-semibold text-gray-800 mb-2">{video.name}</h4>
-                  <p className="text-sm text-gray-600 line-clamp-2">{video.description}</p>
+                  {selectedVideo?.id === video.id && (
+                    <div className="w-3 h-3 bg-blue-500 rounded-full flex-shrink-0 ml-3 mt-1"></div>
+                  )}
                 </div>
-                {selectedVideo?.id === video.id && (
-                  <div className="w-3 h-3 bg-blue-500 rounded-full flex-shrink-0 ml-3 mt-1"></div>
-                )}
+                
               </div>
-              
-              {/* Download Button for Individual Video */}
-              {video.downloadUrl && (
-                <div className="mt-3 pt-3 border-t border-gray-100">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const link = document.createElement('a');
-                      link.href = video.downloadUrl!;
-                      link.download = video.downloadFileName || `${video.name}-resources.zip`;
-                      link.target = '_blank';
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                    }}
-                    className="flex items-center space-x-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded text-sm transition-all duration-200 w-full justify-center"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Download Resources</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Resources Section */}
-      <div className="mt-8 space-y-8">
-        {((programPage.resources && programPage.resources.length > 0) || (programPage.programResources && programPage.programResources.length > 0)) && (
-          <div>
-            <ResourcesDownload 
-              resources={[
-                ...(programPage.resources || []),
-                ...(programPage.programResources || [])
-              ]} 
-            />
+            ))}
           </div>
-        )}
-        
-        {/* Timer Section */}
-        <div>
-          <Timer />
         </div>
       </div>
 
-      {/* Next Page Button */}
-      {hasNextPage && onNextPage && (
-        <div className="mt-8 flex justify-end">
-          <button
-            onClick={onNextPage}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            Next Page
-            <ChevronRight className="ml-2 -mr-1 w-5 h-5" />
-          </button>
-        </div>
-      )}
+      {/* Download Resources Section */}
+      <div className="mt-8">
+        {programPage.programResources && programPage.programResources.length > 0 && (
+          <ResourcesDownload 
+            resources={programPage.programResources.map(resource => ({
+              name: resource.name,
+              url: resource.url,
+              type: resource.type || 'file'
+            }))} 
+          />
+        )}
+      </div>
+
+      {/* Timer Section */}
+      <div className="mt-8">
+        <Timer />
+      </div>
+
+
+      {/* Next page navigation is handled in the parent component */}
     </div>
   );
 };

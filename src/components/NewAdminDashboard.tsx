@@ -141,7 +141,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const addVideoToPage = (pageId: string) => {
     const newVideo: Video = {
       id: `video-${Date.now()}`,
-      name: 'New Video',
+      name: '',
       description: '',
       url: ''
     };
@@ -169,15 +169,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   const updateVideo = (videoId: string, updates: Partial<Video>) => {
-    setEditingProgram(prev => ({
-      ...prev,
-      pages: (prev.pages || []).map(page => ({
-        ...page,
-        videos: (page.videos || []).map(video => 
-          video.id === videoId ? { ...video, ...updates } : video
-        )
-      }))
-    }));
+    setEditingProgram(prev => {
+      const updatedPages = (prev.pages || []).map(page => {
+        const videoIndex = page.videos?.findIndex(v => v.id === videoId) ?? -1;
+        if (videoIndex >= 0) {
+          const updatedVideos = [...(page.videos || [])];
+          updatedVideos[videoIndex] = { ...updatedVideos[videoIndex], ...updates };
+          return { ...page, videos: updatedVideos };
+        }
+        return page;
+      });
+      
+      return { ...prev, pages: updatedPages };
+    });
   };
 
   const deleteVideo = (pageId: string, videoId: string) => {
@@ -298,13 +302,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   {page.videos?.map((video) => (
                     <div key={video.id} className="mb-4 p-3 border rounded bg-gray-50">
                       <div className="flex justify-between items-start mb-2">
-                        <input
-                          type="text"
-                          value={video.name}
-                          onChange={(e) => updateVideo(video.id, { name: e.target.value })}
-                          className="font-medium bg-transparent border-b border-transparent focus:border-gray-300 focus:outline-none"
-                          placeholder="Video title"
-                        />
+                        <div className="flex-1">
+                          <input
+                            type="text"
+                            value={video.description}
+                            onChange={(e) => updateVideo(video.id, { description: e.target.value })}
+                            className="w-full text-sm text-gray-700 bg-transparent border-b border-transparent focus:border-gray-300 focus:outline-none"
+                            placeholder="Enter video description"
+                          />
+                        </div>
                         <button
                           onClick={() => deleteVideo(page.id, video.id)}
                           className="text-red-600 hover:text-red-800 ml-2"
@@ -314,13 +320,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </div>
                       
                       <div className="mb-2">
-                        <label className="block text-xs text-gray-500 mb-1">Description</label>
+                        <label className="block text-xs text-gray-500 mb-1">Video Title</label>
                         <input
                           type="text"
-                          value={video.description || ''}
-                          onChange={(e) => updateVideo(video.id, { description: e.target.value })}
+                          value={video.name || ''}
+                          onChange={(e) => updateVideo(video.id, { name: e.target.value })}
                           className="w-full px-2 py-1 text-sm border border-gray-200 rounded"
-                          placeholder="Video description"
+                          placeholder="Video title (optional)"
                         />
                       </div>
 

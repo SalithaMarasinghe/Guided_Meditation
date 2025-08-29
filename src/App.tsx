@@ -1,17 +1,100 @@
 import { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { SidePanel } from './components/SidePanel';
 import { ProgramPage } from './components/ProgramPage';
 import { AdminDashboard } from './components/NewAdminDashboard';
 import { FirebaseService } from './services/firebaseService';
 import { MeditationProgram } from './types';
-import { Loader, ChevronLeft, ChevronRight } from 'lucide-react';
+import { BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
+import LoginPage from './pages/LoginPage';
+import { AuthProvider } from './contexts/AuthContext';
+import { ProtectedRoute } from './components/ProtectedRoute';
 
-function App() {
+// Main App Component with Authentication
+const App = () => {
+  return (
+    <Router>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </Router>
+  );
+};
+
+// Component to handle routing
+const AppRoutes = () => {
+  const location = useLocation();
+  
+  if (location.pathname === '/admin' || location.pathname === '/admin/') {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+
+  return (
+    <Routes>
+      <Route path="/admin/login" element={<LoginPage />} />
+      <Route 
+        path="/admin/*" 
+        element={
+          <ProtectedRoute>
+            <AdminApp />
+          </ProtectedRoute>
+        } 
+      />
+      <Route path="/*" element={<UserApp />} />
+    </Routes>
+  );
+};
+
+// Component for Admin Interface
+const AdminApp = () => {
+  const [programs, setPrograms] = useState<MeditationProgram[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = FirebaseService.onProgramsChange((newPrograms) => {
+      setPrograms(newPrograms);
+      setLoading(false);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  const refreshPrograms = async () => {
+    try {
+      const newPrograms = await FirebaseService.getPrograms();
+      setPrograms(newPrograms);
+    } catch (error) {
+      console.error('Error refreshing programs:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-green-50">
+        <div className="flex items-center space-x-2">
+          <div className="w-6 h-6 animate-spin text-blue-600" />
+          <span className="text-gray-600">Loading admin dashboard...</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <AdminDashboard 
+        programs={programs}
+        onProgramsChange={refreshPrograms}
+      />
+    </div>
+  );
+};
+
+// Component for User Interface
+const UserApp = () => {
   const [programs, setPrograms] = useState<MeditationProgram[]>([]);
   const [selectedProgram, setSelectedProgram] = useState<MeditationProgram | null>(null);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [completedVideos, setCompletedVideos] = useState<string[]>([]);
-  const [isAdminMode, setIsAdminMode] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,18 +110,45 @@ function App() {
     setSelectedProgram(program);
     setCurrentPageIndex(0);
     setCompletedVideos([]);
-    setIsAdminMode(false);
+  };
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Scroll to top when page changes
+  useEffect(() => {
+    scrollToTop();
+  }, [currentPageIndex]);
+
+  const scrollToVideoPlayer = () => {
+    const videoPlayer = document.getElementById('videoPlayer');
+    if (videoPlayer) {
+      videoPlayer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const handleNextPage = () => {
-    if (selectedProgram && currentPageIndex < selectedProgram.pages.length - 1) {
-      setCurrentPageIndex(currentPageIndex + 1);
+    if (!selectedProgram) return;
+    if (currentPageIndex < selectedProgram.pages.length - 1) {
+      setCurrentPageIndex(prev => {
+        // Use setTimeout to ensure the new content is rendered before scrolling
+        setTimeout(scrollToVideoPlayer, 0);
+        return prev + 1;
+      });
     }
   };
 
   const handlePreviousPage = () => {
+    if (!selectedProgram) return;
     if (currentPageIndex > 0) {
-      setCurrentPageIndex(currentPageIndex - 1);
+      setCurrentPageIndex(prev => {
+        // Use setTimeout to ensure the new content is rendered before scrolling
+        setTimeout(scrollToVideoPlayer, 0);
+        return prev - 1;
+      });
     }
   };
 
@@ -48,27 +158,13 @@ function App() {
     );
   };
 
-  const handleAdminToggle = () => {
-    setIsAdminMode(!isAdminMode);
-    if (!isAdminMode) {
-      setSelectedProgram(null);
-    }
-  };
-
-  const refreshPrograms = async () => {
-    try {
-      const newPrograms = await FirebaseService.getPrograms();
-      setPrograms(newPrograms);
-    } catch (error) {
-      console.error('Error refreshing programs:', error);
-    }
-  };
+  // Admin toggle is handled by navigation in the SidePanel component
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-green-50">
         <div className="flex items-center space-x-2">
-          <Loader className="w-6 h-6 animate-spin text-blue-600" />
+          <div className="w-6 h-6 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
           <span className="text-gray-600">Loading meditation programs...</span>
         </div>
       </div>
@@ -81,116 +177,48 @@ function App() {
         programs={programs}
         selectedProgram={selectedProgram}
         onSelectProgram={handleSelectProgram}
-        onAdminClick={handleAdminToggle}
-        isAdminMode={isAdminMode}
       />
       
-      {isAdminMode ? (
-        <AdminDashboard
-          programs={programs}
-          onProgramsChange={refreshPrograms}
-        />
-      ) : selectedProgram ? (
-        selectedProgram.pages.length > 0 ? (
-          <div className="flex-1 flex flex-col">
-            {/* Page Navigation Header */}
-            <div className="bg-white border-b border-gray-200 px-6 py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <h2 className="text-lg font-semibold text-gray-800">
-                    Page {currentPageIndex + 1} of {selectedProgram.pages.length}
-                  </h2>
-                  <div className="flex items-center space-x-2">
-                    {selectedProgram.pages.map((_, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setCurrentPageIndex(index)}
-                        className={`w-3 h-3 rounded-full transition-all duration-200 ${
-                          index === currentPageIndex
-                            ? 'bg-blue-600'
-                            : index < currentPageIndex
-                            ? 'bg-green-500'
-                            : 'bg-gray-300 hover:bg-gray-400'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={handlePreviousPage}
-                    disabled={currentPageIndex === 0}
-                    className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      currentPageIndex === 0
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                        : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                    }`}
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    <span>Previous</span>
-                  </button>
-                  <button
-                    onClick={handleNextPage}
-                    disabled={currentPageIndex >= selectedProgram.pages.length - 1}
-                    className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      currentPageIndex >= selectedProgram.pages.length - 1
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                        : 'bg-blue-600 hover:bg-blue-700 text-white'
-                    }`}
-                  >
-                    <span>Next</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Program Page Content */}
-            <ProgramPage
+      <main className="flex-1 overflow-y-auto p-6">
+        {selectedProgram ? (
+          <div className="max-w-4xl mx-auto">
+            <ProgramPage 
               programPage={{
                 ...selectedProgram.pages[currentPageIndex],
                 programResources: selectedProgram.resources
-              }}
+              }} 
               programName={selectedProgram.name}
               onNextPage={handleNextPage}
               hasNextPage={currentPageIndex < selectedProgram.pages.length - 1}
               onVideoComplete={handleVideoComplete}
               completedVideos={completedVideos}
             />
+            <div className="mt-8 flex justify-between">
+              <button
+                onClick={handlePreviousPage}
+                disabled={currentPageIndex === 0}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50"
+              >
+                <ChevronLeft className="inline mr-1" /> Previous Page
+              </button>
+              <button
+                onClick={handleNextPage}
+                disabled={currentPageIndex >= selectedProgram.pages.length - 1}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50"
+              >
+                Next Page <ChevronRight className="inline ml-1" />
+              </button>
+            </div>
           </div>
         ) : (
-          <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-blue-50 to-green-50">
-            <div className="text-center">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-4">No Pages Available</h2>
-              <p className="text-gray-600">This program doesn't have any pages yet.</p>
-              {isAdminMode && (
-                <p className="text-gray-500 text-sm mt-2">Add pages in the admin dashboard.</p>
-              )}
-            </div>
+          <div className="flex flex-col items-center justify-center h-full text-gray-500">
+            <BookOpen className="w-12 h-12 mb-4 opacity-50" />
+            <p>Select a program to get started</p>
           </div>
-        )
-      ) : (
-        <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-blue-50 to-green-50">
-          <div className="text-center max-w-md">
-            <h2 className="text-3xl font-bold text-gray-800 mb-4">Welcome to Your Meditation Journey</h2>
-            <p className="text-gray-600 mb-6">
-              Select a meditation program from the sidebar to begin your mindful practice.
-            </p>
-            <div className="text-sm text-gray-500">
-              {programs.length === 0 ? (
-                <>
-                  <p>No programs available yet.</p>
-                  <p className="mt-2">Use the admin dashboard to create your first program.</p>
-                </>
-              ) : (
-                <p>Choose from {programs.length} available programs</p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+        )}
+      </main>
     </div>
   );
-}
+};
 
 export default App;

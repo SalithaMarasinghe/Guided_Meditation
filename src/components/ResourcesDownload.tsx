@@ -11,18 +11,7 @@ interface ResourcesDownloadProps {
 export const ResourcesDownload = ({ resources }: ResourcesDownloadProps) => {
   if (!resources || resources.length === 0) return null;
 
-  const handleDownloadAll = () => {
-    resources.forEach((resource) => {
-      const link = document.createElement('a');
-      link.href = resource.url;
-      link.download = resource.name;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    });
-  };
-
-  const getFileIcon = (type: string) => {
+const getFileIcon = (type: string) => {
     switch (type.toLowerCase()) {
       case 'pdf':
         return <FileText className="w-5 h-5 text-red-500" />;
@@ -44,18 +33,7 @@ export const ResourcesDownload = ({ resources }: ResourcesDownloadProps) => {
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Downloadable Resources</h3>
-        {resources.length > 1 && (
-          <button
-            onClick={handleDownloadAll}
-            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            <Download className="w-3.5 h-3.5 mr-1.5" />
-            Download All
-          </button>
-        )}
-      </div>
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">Downloadable Resources</h3>
       
       <div className="space-y-3">
         {resources.map((resource, index) => {
