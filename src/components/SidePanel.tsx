@@ -1,19 +1,17 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { MeditationProgram } from '../types';
-import { Play, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Play, Settings } from 'lucide-react';
 
 interface SidePanelProps {
   programs: MeditationProgram[];
   selectedProgram: MeditationProgram | null;
   onSelectProgram: (program: MeditationProgram) => void;
-  onToggleCollapse: (isCollapsed: boolean) => void;
 }
 
 export const SidePanel: React.FC<SidePanelProps> = ({
   programs,
   selectedProgram,
-  onSelectProgram,
-  onToggleCollapse
+  onSelectProgram
 }) => {
   const renderProgramsList = () => {
     if (programs.length === 0) {
@@ -60,43 +58,39 @@ export const SidePanel: React.FC<SidePanelProps> = ({
     );
   };
 
-  const [isCollapsed, setIsCollapsed] = useState(false);
-
-  const toggleSidebar = () => {
-    const newState = !isCollapsed;
-    setIsCollapsed(newState);
-    onToggleCollapse(newState);
-  };
-
   return (
-    <div 
-      className={`h-full bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ease-in-out ${
-        isCollapsed ? 'w-16' : 'w-80'
-      }`}
-    >
-      {/* Toggle Button */}
-      <button
-        onClick={toggleSidebar}
-        className="absolute -right-3 top-6 z-30 w-6 h-12 flex items-center justify-center bg-white rounded-r-lg border border-l-0 border-gray-200 shadow-sm hover:bg-gray-50 transition-colors"
-      >
-        {isCollapsed ? (
-          <ChevronRight className="w-4 h-4 text-gray-500" />
-        ) : (
-          <ChevronLeft className="w-4 h-4 text-gray-500" />
-        )}
-      </button>
+    <div className="w-72 md:w-80 bg-white border-r border-gray-200 flex flex-col h-full shadow-lg md:shadow-none">
+      <div className="p-6 border-b border-gray-200">
+        <h1 className="text-2xl font-bold text-gray-800 mb-2">Meditation</h1>
+        <p className="text-gray-600 text-sm">Find your inner peace</p>
+      </div>
 
-      {/* Sidebar Content */}
-      <div className={`overflow-hidden transition-all duration-300 ${isCollapsed ? 'opacity-0 w-0' : 'opacity-100 w-full'}`}>
-        <div className="p-6 border-b border-gray-200">
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Meditation</h1>
-          <p className="text-gray-600 text-sm">Find your inner peace</p>
-        </div>
+      <div className="p-4 border-b border-gray-100">
+        <a
+          href="/admin/dashboard"
+          className="w-full flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 text-gray-600 hover:bg-gray-100"
+        >
+          <Settings className="w-4 h-4" />
+          <span className="text-sm font-medium">Admin Dashboard</span>
+        </a>
+      </div>
+      
+      <div className="px-4 py-2 border-b border-gray-100 md:hidden">
+        <button 
+          onClick={() => {
+            // This will be handled by the parent's overlay click
+          }}
+          className="w-full flex items-center justify-end text-gray-500 hover:text-gray-700"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+          </svg>
+        </button>
+      </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="space-y-2">
-            {renderProgramsList()}
-          </div>
+      <div className="flex-1 overflow-y-auto p-4 pb-20 md:pb-4">
+        <div className="space-y-2">
+          {renderProgramsList()}
         </div>
       </div>
     </div>

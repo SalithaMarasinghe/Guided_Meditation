@@ -1,29 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, RotateCcw, Bell, BellOff } from 'lucide-react';
 
-// Audio file path
-const BELL_SOUND = '/sounds/bell.mp3';
-
 export const Timer: React.FC = () => {
   const [minutes, setMinutes] = useState<number>(30);
   const [seconds, setSeconds] = useState<number>(0);
   const [isActive, setIsActive] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  
-  // Initialize audio element
-  useEffect(() => {
-    audioRef.current = new Audio(BELL_SOUND);
-    audioRef.current.load(); // Preload the audio
-    
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-    };
-  }, []);
-  
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -55,22 +38,31 @@ export const Timer: React.FC = () => {
   }, [isActive, minutes, seconds, isMuted]);
 
   const playBellSound = () => {
-    if (isMuted || !audioRef.current) return;
+    if (isMuted) return;
     
-    try {
-      // Reset audio to start and play
-      audioRef.current.currentTime = 0;
-      const playPromise = audioRef.current.play();
-      
-      // Handle any play() promise rejections
-      if (playPromise !== undefined) {
-        playPromise.catch(error => {
-          console.error('Error playing sound:', error);
-        });
-      }
-    } catch (error) {
-      console.error('Error playing bell sound:', error);
-    }
+    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    
+    // Create a simple bell sound
+    const bell = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    
+    bell.type = 'sine';
+    const now = audioCtx.currentTime;
+    
+    // Bell characteristics
+    bell.frequency.setValueAtTime(1000, now);
+    bell.frequency.exponentialRampToValueAtTime(400, now + 1);
+    
+    // Volume envelope
+    gainNode.gain.setValueAtTime(0, now);
+    gainNode.gain.linearRampToValueAtTime(0.5, now + 0.1);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 2);
+    
+    bell.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    bell.start();
+    bell.stop(now + 2);
   };
 
   const toggleTimer = () => {
@@ -78,12 +70,12 @@ export const Timer: React.FC = () => {
       // Don't start if time is 00:00
       return;
     }
-
+    
     if (isActive && minutes === 0 && seconds === 0) {
       // Timer just ended, play sound
       playBellSound();
     }
-
+    
     setIsActive(!isActive);
   };
 
@@ -122,7 +114,7 @@ export const Timer: React.FC = () => {
   return (
     <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
       <h3 className="text-xl font-semibold text-gray-800 mb-4">Meditation Timer</h3>
-
+      
       <div className="flex items-center justify-center space-x-4 mb-6">
         <div className="flex flex-col items-center">
           <label className="text-sm text-gray-600 mb-1">Minutes</label>

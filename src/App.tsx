@@ -91,13 +91,15 @@ const AdminApp = () => {
 
 // Component for User Interface
 const UserApp = () => {
+  // State declarations at the top
   const [programs, setPrograms] = useState<MeditationProgram[]>([]);
   const [selectedProgram, setSelectedProgram] = useState<MeditationProgram | null>(null);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [completedVideos, setCompletedVideos] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  // All effects together
   useEffect(() => {
     const unsubscribe = FirebaseService.onProgramsChange((newPrograms) => {
       setPrograms(newPrograms);
@@ -107,21 +109,17 @@ const UserApp = () => {
     return unsubscribe;
   }, []);
 
-  const handleSelectProgram = (program: MeditationProgram) => {
-    setSelectedProgram(program);
-    setCurrentPageIndex(0);
-    setCompletedVideos([]);
-  };
-
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  // Scroll to top when page changes
   useEffect(() => {
-    scrollToTop();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentPageIndex]);
 
+  useEffect(() => {
+    if (selectedProgram && window.innerWidth < 768) {
+      setIsSidebarOpen(false);
+    }
+  }, [selectedProgram]);
+
+  // Helper functions
   const scrollToVideoPlayer = () => {
     const videoPlayer = document.getElementById('videoPlayer');
     if (videoPlayer) {
@@ -131,11 +129,16 @@ const UserApp = () => {
     }
   };
 
+  const handleSelectProgram = (program: MeditationProgram) => {
+    setSelectedProgram(program);
+    setCurrentPageIndex(0);
+    setCompletedVideos([]);
+  };
+
   const handleNextPage = () => {
     if (!selectedProgram) return;
     if (currentPageIndex < selectedProgram.pages.length - 1) {
       setCurrentPageIndex(prev => {
-        // Use setTimeout to ensure the new content is rendered before scrolling
         setTimeout(scrollToVideoPlayer, 0);
         return prev + 1;
       });
@@ -146,7 +149,6 @@ const UserApp = () => {
     if (!selectedProgram) return;
     if (currentPageIndex > 0) {
       setCurrentPageIndex(prev => {
-        // Use setTimeout to ensure the new content is rendered before scrolling
         setTimeout(scrollToVideoPlayer, 0);
         return prev - 1;
       });
@@ -158,8 +160,6 @@ const UserApp = () => {
       prev.includes(videoId) ? prev : [...prev, videoId]
     );
   };
-
-  // Admin toggle is handled by navigation in the SidePanel component
 
   if (loading) {
     return (
@@ -173,27 +173,39 @@ const UserApp = () => {
   }
 
   return (
-    <div className="relative h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-screen bg-gray-50 relative">
+      {/* Mobile menu button */}
+      <button 
+        className="fixed top-4 left-4 z-30 p-2 rounded-md bg-white shadow-md md:hidden"
+        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
+      {/* Overlay for mobile */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
+      {/* SidePanel */}
       <div 
-        className={`fixed top-0 left-0 h-full z-20 transition-transform duration-300 ease-in-out ${
-          isSidebarCollapsed ? 'w-16' : 'w-80'
+        className={`fixed md:relative z-30 h-full transition-transform duration-300 ease-in-out ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
         <SidePanel
           programs={programs}
           selectedProgram={selectedProgram}
           onSelectProgram={handleSelectProgram}
-          onToggleCollapse={setIsSidebarCollapsed}
         />
       </div>
       
-      <main 
-        className="h-full overflow-y-auto p-6 pl-16 transition-all duration-300"
-        style={{
-          marginLeft: isSidebarCollapsed ? '4rem' : '20rem',
-          width: isSidebarCollapsed ? 'calc(100% - 4rem)' : 'calc(100% - 20rem)'
-        }}
-      >
+      <main className="flex-1 overflow-y-auto p-4 md:p-6">
         {selectedProgram ? (
           <div className="max-w-4xl mx-auto">
             <ProgramPage 
